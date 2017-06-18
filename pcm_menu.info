@@ -1,0 +1,14 @@
+name = Open Signal PCM Menu
+description = "Creates custom menu pages"
+
+
+core = 7.x
+package = Open Signal PCM Community Media Advanced
+version = 7.x-1.0
+project = "pcm_menu"
+project_status_url = https://github.com/cm-advanced/pcm_menu
+
+files[] = pcm_menu.module
+
+
+

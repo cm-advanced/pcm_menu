@@ -1,0 +1,653 @@
+<?php
+/**
+ * @file
+ * Code for generating custom menu pages for PCM 
+ */
+
+define ("PCM_MENU_SYS_ADMIN_ROLE", 'System Admin');
+define ("PCM_MENU_ADMIN_ROLE", 'administrator');
+define ("PCM_MENU_PROGRAMMING_STAFF_ROLE", 'Staff - Programming');
+
+function pcm_menu_get_default_programming_blocks($ishtml = FALSE) {
+
+  $blocks = 
+    "show_admin_displays:block_2<br />".
+    "show_admin_displays:block<br />".
+    "show_admin_displays:block_1<br />".
+    "airings_missing_show_content:block<br />".
+    "projects_staff_dashboard:block_1<br />".
+    "series_request_search:block_1<br />".
+    "projects_active_completion_date_past:block";
+
+  if (!$ishtml) {
+    $blocks = str_replace("<br />", "\r", $blocks);
+  }
+  
+  return $blocks;
+}
+  
+/**
+ * Page callback: Current posts settings
+ *
+ * @see current_posts_menu()
+ */
+function pcm_menu_configure_admin_programming_blocks_form($form, &$form_state) {
+  
+  $view_blocks = pcm_menu_get_default_programming_blocks(TRUE);
+ 
+  $description = "Enter the title of each block on a separate line to display ".
+      "it on the page. The following titles can be used:<br />".
+      $view_blocks;
+  
+  // want to add newlines afer each constant
+
+  $form['pcm_menu_configure_admin_programming_blocks'] = array(
+    '#title' => t('Configure admin programming page'),    
+    '#description' => t($description),    
+    '#type' => 'textarea',
+    '#default_value' => variable_get(
+        'pcm_menu_configure_admin_programming_blocks', 
+        $view_blocks),
+    '#rows' => 7,
+    '#cols' => 60,
+    '#required' => TRUE,
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Implements hook_menu().
+ */
+function pcm_menu_menu() {
+  $items = array();
+
+  $items['start'] = 
+    array(
+	  'page callback' => 'pcm_menu_home_callback',
+	  'access callback' => 'pcm_menu_home_access_callback',
+	  'type' => MENU_NORMAL_ITEM,
+	  );   
+  
+  
+  $items['admin/config/content/pcm_menu_configure_admin_programming_blocks'] = array(
+    'title' => 'Configure programming blocks',
+    'description' => 'Configure admin programming blocks to display',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pcm_menu_configure_admin_programming_blocks_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['dashboard'] = 
+   array(
+   'title' => 'My Dashboard',
+   'description' => 'My Dashboard',
+   'page callback' => 'pcm_menu_producer_page',
+   'access arguments' => array('access content'),      
+   'type' => MENU_NORMAL_ITEM,
+   );
+
+  //PROGRAMMING MENU ITEMS
+  $projects_menu_block = 
+    array(
+	  array('title'=>t('Search Projects'),
+		'menu_alias'=>'search',
+		'path'=>'admin/projects/search'),
+	  array('title'=>t('Add Project'),
+		'menu_alias'=>'add',
+		'path'=>'node/add/cm-project'),
+	  array('title'=>t('Projects: Active Completion Date Past'),
+		'menu_alias'=>'complete',
+		'path'=>
+		'admin/programming/projects/active-completion-date-past'),
+	  );
+  $series_request_menu_block = 
+    array(
+  	  array('title'=>t('Series Requests: Search'),
+		'menu_alias'=>'series-requests-search',
+		'path'=>'admin/programming/series_requests/search'),
+	  array('title'=>t('Series Requests: Pending'),
+		'menu_alias'=>'series-requests-pending',
+		'path'=>'admin/programming/series_requests/pending'),
+	  array('title'=>t('Series Requests: Approved Schedule Chart'),
+		'menu_alias'=>'series-requests-approved',
+		'path'=>'admin/programming/series_requests/scheduled'),
+	  array('title'=>t('Series Requests: Series Slot Master List'),
+		'menu_alias'=>'series-requests-slot_master_list',
+		'path'=>'admin/programming/series-slot/master-list'),
+	  array('title'=>t('Series Requests: Batch Scheduler'),
+		'menu_alias'=>'series-requests-batch_scheduler',
+		'path'=>'admin/series-requests/batch_scheduler'),
+    array('title'=>t('Series Requests: Email Confirmation'),
+    'menu_alias'=>'series_requests-email_confirmation',
+    'path'=>'admin/series-request/airings-scheduled'),
+	  );
+  $scheduling_menu_block = 
+    array(
+	  array('title'=>t('Programming Settings'),
+		'menu_alias'=>'settings',
+		'path'=>'admin/programming/settings'),
+	  array('title'=>t('Scheduling Grid'),
+		'menu_alias'=>'grid',
+		'path'=>'admin/manage/scheduling'),
+	  /**
+	  array('title'=>t('Scheduling Grid (Series)'),
+		'menu_alias'=>'grid-series',
+		'path'=>'admin/manage/scheduling/11/0/6/filter_end'),
+	  */
+	  array('title'=>t('Find Airing'),
+		'menu_alias'=>'find',
+		'path'=>'admin/airing-master-list'),	  
+	  array('title'=>t('Airings Missing Show Content'),
+		'menu_alias'=>'airings-missing-show-content',
+		'path'=>'admin/airings/missing-show-content'),	  
+	  
+    );
+    $producers_menu_block = 
+    array(
+	  array('title'=>t('Find Producer'),
+		'menu_alias'=>'find',
+		'path'=>'admin/people'),
+	  array('title'=>t('Add Producer'),
+		'menu_alias'=>'add',
+		'path'=>'admin/people/create'),
+    );
+    $show_menu_block = 
+    array(
+	  array('title'=>t('Find Show'),
+		'menu_alias'=>'find',
+		'path'=>'admin/projects/shows'),
+	  array('title'=>t('Add Show'),
+		'menu_alias'=>'add',
+		'path'=>'node/add/cm-show'),
+	  array('title'=>t('Repeat Shows of LIve Airings Missing Files'),
+		'menu_alias'=>'live-repeat-missing-file',
+		'path'=>'admin/programming/shows/live-repeat-missing-file'),
+	  array('title'=>t('Shows To Be Scheduled'),
+		'menu_alias'=>'shows-to-be-scheduled',
+		'path'=>'admin/shows/to-be-scheduled'),
+	  array('title'=>t('Newly Submitted Episodes'),
+		'menu_alias'=>'new-episodes',
+		'path'=>'admin/shows/new-episodes'),
+    );
+  //permissions arrays for the menu items, need one for each menu page
+  $permissions = array('Programming' => array('access administration menu'));
+		       
+
+  //BUILD LARGE DATA ARRAY CONTAINING ALL OF THE MENU ITEMS
+  $menus = 
+    array(
+	  //THE MAIN PROGRAMMING ADMIN MENU PAGE
+	  'Programming' =>
+	  array(
+		t('Producers') => $producers_menu_block,
+		t('Projects') => $projects_menu_block,
+		t('Shows/Tapes') => $show_menu_block,		
+		t('Scheduling') => $scheduling_menu_block,
+		t('Series Requests') => $series_request_menu_block,
+		)
+	  );
+
+  //LOOP THROUGH ARRAY, BUILDING MENU ITEMS
+  $menu_weight = 0;
+  foreach ($menus as $menu_title=>$menu_page) {
+    $menu_path = "admin/".strtolower(str_replace(' ', '-', $menu_title));
+    $menu_weight++;
+    //THE MENU ITEM FOR THE PARTICULAR MENU PAGE
+    $items[$menu_path] = array(
+			       'title' => $menu_title,
+			       'description' => $menu_title,
+			       'page callback' => 'pcm_menu_management_page',
+			       'page arguments' => array($menu_path),
+			       'access arguments' => $permissions[$menu_title],
+			       'weight'=>$menu_weight,
+			       );
+    $block_weight = 0;
+    $block_count = count($menu_page);
+    foreach($menu_page as $block_title => $menu_block) {
+      $block_path = strtolower(str_replace(' ', '-', $block_title));
+      $block_weight++;
+      $position = ($block_weight<=round($block_count/2)) ? 'left' : 'right';
+      // ADDS A BLOCK OF MENU ITEMS FOR EACH SECTION ON THE PAGE
+      $items[$menu_path.'/'.$block_path] = 
+	array(
+	      'title' => $block_title,
+	      'position' => $position,
+	      'page callback' => 'system_admin_menu_block_page',
+	      'access arguments' => $permissions[$menu_title],
+	      'file' => 'system.admin.inc',
+	      'file path' => drupal_get_path('module', 'system'),
+	      'weight' => $block_weight,
+	      );
+      $item_weight=0;
+      foreach($menu_block as $menu_item) {
+	$item_weight++;
+	$item_alias = $menu_item['menu_alias'];
+	$items[$menu_path."/".$block_path."/".$item_alias] = 
+	  array(
+		'title' => $menu_item['title'],
+		'page callback' => 'pcm_menu_alias_callback',
+		'page arguments' => array($menu_item['path']),
+		'access arguments' => $permissions[$menu_title],
+		'type' => MENU_NORMAL_ITEM,
+		'weight' => $item_weight,
+		);
+      }
+    }
+  } 
+  return $items;
+}
+
+function pcm_menu_alias_callback($path) {
+  drupal_goto($path);
+}
+
+
+/**
+ * Menu callback; Provide the administration overview page.
+ */
+function pcm_menu_management_page($path) {
+  $blocks = array();
+
+  $view = 
+    views_get_view('airing_conflict_block');
+  if ($view) {
+    //build and execute the view using the content type of the bucket
+    $output = $view->execute_display('block_1');   
+    $result_count = count($view->result);
+    if ($result_count > 0) {
+      drupal_set_message("<h2>".$output['subject']."</h2>".
+			 t("There are airings that overlap! ".
+			   "Please fix them using the links below.").
+			 $output['content'], 'error');
+    }  
+  }
+
+  $sql = "SELECT menu_name, mlid 
+          FROM {menu_links} 
+          WHERE link_path = '$path'";
+
+  $db_result = db_query($sql);
+
+  $menu_info = $db_result->fetchAssoc();
+
+  if ($menu_info) {
+    $menu_name = $menu_info['menu_name'];
+    $mlid = $menu_info['mlid'];
+    $result = db_query("
+      SELECT m.*, ml.*
+      FROM {menu_links} ml
+      INNER JOIN {menu_router} m ON ml.router_path = m.path
+      WHERE ml.link_path <> 'admin/help' 
+      AND menu_name = '$menu_name' 
+      AND ml.plid = $mlid
+      AND hidden = 0", array(), array('fetch' => PDO::FETCH_ASSOC));
+
+    foreach ($result as $item) {
+      _menu_link_translate($item);
+      if (!$item['access']) {
+        continue;
+      }
+      // The link description, either derived from 'description' in hook_menu()
+      // or customized via menu module is used as title attribute.
+      if (!empty($item['localized_options']['attributes']['title'])) {
+        $item['description'] = 
+	  $item['localized_options']['attributes']['title'];
+        unset($item['localized_options']['attributes']['title']);
+      }
+      $block = $item;
+      $block['content'] = '';
+      $block['content'] .= 
+	theme('admin_block_content', 
+	      array('content' => system_admin_menu_block($item)));
+
+      if (!empty($block['content'])) {
+        $block['show'] = TRUE;
+      }
+
+      // Prepare for sorting as in function _menu_tree_check_access().
+      // The weight is offset so it is always positive, with a uniform 5-digits.
+      $blocks[(50000 + $item['weight']) . ' ' . $item['title'] . ' ' . 
+	      $item['mlid']] = $block;
+    }
+  }
+  if ($blocks) {
+    ksort($blocks);
+    $content = theme('admin_page', array('blocks' => $blocks));
+    $content .= "<h2>".l("My Dashboard", "dashboard")."</h2>";
+  // DISPLAY THE VIEW BLOCKS
+    
+    $default_blocks = pcm_menu_get_default_programming_blocks();
+    
+    $view_blocks = variable_get('pcm_menu_configure_admin_programming_blocks',
+        $default_blocks);
+    $view_blocks = explode("\r", $view_blocks);
+   
+    foreach ($view_blocks as $view_string) {
+      $trim_string = trim($view_string); 
+      if (!$trim_string) {
+        continue;
+      }      
+      $explode = explode(':', $trim_string);
+      $view_name = $explode[0];
+      $display = $explode[1];
+      $view = views_get_view($view_name);
+      if ($view) {
+	//build and execute the view using the content type of the bucket
+	$output = $view->execute_display($display);   
+	$content .= "<div class='admin-panel'><h2>".$output['subject'].
+	  "</h2>".$output['content']."</div>";
+      }
+    }  
+    return $content;
+  }
+  else {
+    return t('You do not have any administrative items.');
+  }
+}
+
+function pcm_menu_user_view($account, $view_mode, $langcode) {
+  global $user;
+  global $pcm_menu_skip_forward;
+
+  if ($user->uid && $view_mode == 'full' && $account->uid == $user->uid &&
+      (!isset($pcm_menu_skip_forward) || !$pcm_menu_skip_forward)) {
+    drupal_goto('dashboard');
+    return;
+  }
+}
+
+function pcm_menu_producer_page() {
+  $roles = array(PCM_MENU_SYS_ADMIN_ROLE,
+   PCM_MENU_ADMIN_ROLE,
+   PCM_MENU_PROGRAMMING_STAFF_ROLE);
+  global $user;
+  $uid = $user->uid;
+  if (!$uid) {
+    drupal_set_message(t("You need to login to see your dashboard"), 
+		       'warning');
+    drupal_goto('user');
+    return;
+  }
+ 
+  $user = user_load($uid);
+  $user_name = $user->display_name;
+  
+  $date_range = pcm_menu_get_dashboard_season_end_date();  
+   
+  $content = "<div class='producer-panel'><h2 class='panel-title'>Welcome " . 
+      $user_name . "</h2></div>";
+
+  // menu appears on right side now
+  $content .= "<p><a href='/user/" . $uid . "/edit?destination=dashboard'>".
+    "Edit Account Settings</a></p>";
+
+
+  pcm_menu_producer_dashboard_class_block($content);
+  pcm_menu_producer_dashboard_forms_block($content);
+
+  $view_blocks = array(
+   'project_producer_dashboard:block',
+   'airings_producer_dashboard:block_1',
+   'shows_producer_dashboard:block_1',
+   'shows_producer_dashboard:block_2'
+   );
+    
+  foreach ($view_blocks as $view_string) {
+    $explode = explode(':', $view_string);
+    $view_name = $explode[0];
+    $display = $explode[1]; 
+    $view = views_get_view($view_name);    
+    if ($view) { 
+      switch ($view->name) {
+        case 'project_producer_dashboard':
+          $view->set_arguments(array($uid));        
+          break;
+
+        case 'airings_producer_dashboard':
+        $view->set_arguments(array($uid, $date_range));        
+          break;
+
+        case 'shows_producer_dashboard':
+          if ($display == 'block_1') {
+            $view->set_arguments(array($uid, $date_range));            
+          }
+          elseif ($display == 'block_2') {
+            $view->set_arguments(array($uid));
+          }
+          break;         
+      }
+            
+      //build and execute the view using the content type of the bucket
+      $output = $view->execute_display($display);  
+      $content .= "<div class='cm-box'><h2>".$output['subject'].
+        "</h2>".$output['content']."</div>";
+    }
+  }
+  
+  global $pcm_menu_skip_forward;
+  $pcm_menu_skip_forward = TRUE;
+  $content .= "<div class='cm-box'><h2>My Profile</h2>".
+    drupal_render(user_view($user))."</div>";
+  $pcm_menu_skip_forward = FALSE;
+  return $content;
+}
+
+function pcm_menu_get_dashboard_season_end_date() {
+  
+  $display = variable_get(CM_SERIES_REQUEST_UPCOMING_AIRINGS_STATUS);
+  $date_range = '2000-01-01--';
+  
+  $roles = 
+    array(CM_SERIES_REQUEST_PROGRAMMING_STAFF_ROLE,
+		   CM_SERIES_REQUEST_SYS_ADMIN_ROLE,
+       CM_SERIES_REQUEST_SITE_ADMIN_ROLE,
+    );
+  $is_staff = cm_series_request_user_has_role($roles) ?
+    TRUE : FALSE;
+  //$is_staff = FALSE;
+  
+  // admin and programming staff see all dates
+  if ($display || $is_staff) {
+    // assumes that the most in advance programming will occur is 5 years
+    $date_range .= date('Y-m-d h:ia', strtotime('+5 years'));   
+    return $date_range;
+  }
+  
+  $current_season = timespan_current(CM_SERIES_REQUEST_SEASON_TIMESPAN_NAME);
+  $season_end_date = $current_season['end'];
+  
+  //the "to" separator is double-hyphen (--) 2012-03-25--2012-03-31  
+  $date_range .= $season_end_date;  
+  return $date_range;  
+}
+
+function pcm_menu_producer_dashboard_class_block(&$content) {
+
+  //these are the cells of the upcoming classes table, it can have up to two
+  //columns
+  $cells = array();
+  $view = views_get_view('upcoming_workshops');    
+  if ($view) {
+    $output = $view->execute_display('block_1');
+    if ($output) {
+      $cells[] = "<h2>".t("Upcoming Workshops").
+	"</h2>".$output['content'];
+    }
+  }
+
+
+  $view = views_get_view('upcoming_workshops');    
+  if ($view) {
+    $output = $view->execute_display('block_2');  
+    if ($output) {
+      $cells[] = "<h2>".t("Upcoming Youth Workshops").
+	"</h2>".$output['content'];
+    }
+  }
+  
+  if (count($cells) == 0) {
+    //do nothing
+  }
+  else if (count($cells) == 1) {
+    $classes = array_pop($cells);
+  }
+  else {
+    $classes = "<table cellpadding=10 ><tr>";
+    foreach($cells as $data) {
+      $classes .= "<td style='border: 1px solid black; padding: 15px'>$data</td>";
+    }
+    $classes .= "</tr></table>";
+  }
+
+  if (isset($classes) && $classes != "") {
+    $options = array(
+		     'handle' => "<h3>".t("Upcoming Classes")."</h3>",
+		     'content' => $classes,
+		     'collapsed' => TRUE,
+		     );
+    $content .= "<div class='cm-box'>".theme('ctools_collapsible', $options).
+      "</div>";
+  }
+}
+
+
+function pcm_menu_producer_dashboard_forms_block(&$content) {
+
+  $view = views_get_view('forms');    
+  if ($view) {
+    $output = $view->execute_display('block_1');
+    if ($output) {
+      $options = array(
+		       'handle' => "<h3>".t("Forms")."</h3>",
+		       'content' => $output['content'],
+		       'collapsed' => TRUE,
+		       );
+      $content .= "<div class='cm-box'>".theme('ctools_collapsible', $options).
+	"</div>";
+      
+    }
+  }
+}
+
+
+/**
+  * We need to redirect users based on roles. When code is used with a rule or
+  * the home_role module, it causes infinite loops or causes issues with civicrm
+  * NO longer needed
+  */
+function pcm_menu_home_callback() {
+  $roles = array(PCM_MENU_PROGRAMMING_STAFF_ROLE,  
+		 );
+  global $user;
+
+  if (!$user->uid) {
+    //drupal_goto('user', array('query'=>array('destination'=>'start')));
+    drupal_goto('user');
+  }
+  else {
+    $destination = !pcm_menu_user_has_role($roles) ?
+      "dashboard" : "admin/programming" ;
+    drupal_goto($destination);
+  }
+  return;
+}
+
+
+/**
+ * Checks if the current user has a role
+ *
+ * @param array $roles
+ *
+ * @return bool
+ */
+function pcm_menu_user_has_role($roles = array()) {
+  global $user;
+  
+  foreach ($roles as $role) {
+    if (in_array($role, $user->roles)) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+function pcm_menu_home_access_callback() {
+  return TRUE;
+}
+
+function pcm_menu_menu_alter(&$items) {
+  $items['node/add']['access callback'] =
+    'pcm_menu_add_content_access_callback';
+
+  $items['node/add/project-renewal-season-']['access callback'] =
+    'pcm_menu_add_content_access_callback';
+
+}
+
+function pcm_menu_add_content_access_callback() {
+  $roles = array(PCM_MENU_PROGRAMMING_STAFF_ROLE,  
+		 PCM_MENU_SYS_ADMIN_ROLE,
+		 PCM_MENU_ADMIN_ROLE,
+		 );
+  global $user;
+  if (!$user->uid) {
+    return FALSE;
+  }
+  else {
+    return pcm_menu_user_has_role($roles);
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function pcm_menu_form_alter(&$form, &$form_state, $form_id) {
+  
+  if ($form['#id'] == "views-exposed-form-airings-producer-dashboard-block-1"){
+    global $user;
+
+    $sql = "
+      SELECT n.nid
+      FROM node as n
+      INNER JOIN field_data_field_project_status status 
+        ON n.nid = status.entity_id          
+      WHERE n.uid = :uid 
+      AND status.field_project_status_value = :status
+      ORDER by n.title
+    ";
+ 
+    $args = array(
+		  ':uid' => $user->uid,
+		  ':status' => 'Active',
+    );
+
+    $results = db_query($sql, $args);
+    $project_values = array(''=>'- Select -');
+    while ($project_id = $results->fetchField()) {
+      $project = node_load($project_id);
+      //$project_values[$project_id] = $project->title;
+      $project_values[$project->title] = $project->title;
+    }
+
+    if (count($project_values) > 2) {
+      $form['title'] =
+	array(
+	      '#title' => "Project",
+	      '#type' => 'select',
+	      '#options'=> $project_values,
+	      );
+    }
+    else {
+      unset($form['title']);
+    }
+
+    $type_values = array(1=>'Premiere Only',
+			 'All' => 'Premieres and Repeats');
+
+    $form['field_is_show_premiere_date_value']['#options'] = $type_values;
+    $form['field_is_show_premiere_date_value']['#default_value'] = 1;
+  }
+ 
+}

@@ -1,0 +1,13 @@
+<?php
+
+function pcm_menu_install() {
+  db_query("UPDATE {system} SET weight = 100 
+            WHERE type = 'module' 
+            AND name = 'pcm_menu'");
+
+  $view_blocks = pcm_menu_get_default_programming_blocks();
+  variable_set(
+        'pcm_menu_configure_admin_programming_blocks', 
+        $view_blocks);
+
+}
